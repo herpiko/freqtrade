@@ -11,7 +11,7 @@ ENV FT_APP_ENV="docker"
 # Prepare environment
 RUN mkdir /freqtrade \
   && apt-get update \
-  && apt-get -y install sudo libatlas3-base curl sqlite3 libhdf5-serial-dev  \
+  && apt-get -y install sudo libatlas3-base curl sqlite3 libhdf5-serial-dev ca-certificates  \
   && apt-get clean \
   && useradd -u 1000 -G sudo -U -m -s /bin/bash ftuser \
   && chown ftuser:ftuser /freqtrade \
@@ -34,9 +34,11 @@ ENV LD_LIBRARY_PATH /usr/local/lib
 
 # Install dependencies
 COPY --chown=ftuser:ftuser requirements.txt requirements-hyperopt.txt /freqtrade/
+COPY --chown=ftuser:ftuser requirements.txt requirements-hyperopt.txt requirements-plot.txt /freqtrade/
 USER ftuser
 RUN  pip install --user --no-cache-dir numpy \
-  && pip install --user --no-cache-dir -r requirements-hyperopt.txt
+  && pip install --user --no-cache-dir -r requirements-hyperopt.txt \
+  && pip install --user --no-cache-dir -r requirements-plot.txt
 
 # Copy dependencies to runtime-image
 FROM base as runtime-image
@@ -48,6 +50,9 @@ COPY --from=python-deps --chown=ftuser:ftuser /home/ftuser/.local /home/ftuser/.
 USER ftuser
 # Install and execute
 COPY --chown=ftuser:ftuser . /freqtrade/
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV CURL_CA_BUNDLE=""
 
 RUN pip install -e . --user --no-cache-dir --no-build-isolation \
   && mkdir /freqtrade/user_data/ \
